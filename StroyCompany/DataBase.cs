@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Data.SqlClient;
+using System.Data;
 
 namespace StroyCompany
 {
@@ -31,6 +32,19 @@ namespace StroyCompany
         {
             SqlCommand cmd = new SqlCommand(query, sqlConnection);
             return cmd.ExecuteReader();
+        }
+
+        public List<string> GetTables()
+        {
+            List<string> tables = new List<string>();
+            DataTable schema = sqlConnection.GetSchema("Tables");
+
+            foreach (DataRow row in schema.Rows)
+            {
+                tables.Add(row[2].ToString());
+            }
+
+            return tables;
         }
 
         public void Dispose()

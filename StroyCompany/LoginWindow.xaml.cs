@@ -1,39 +1,62 @@
-﻿using System.Windows;
+﻿using System.Data;
+using System.Data.SqlClient;
+using System.Windows;
 
 namespace StroyCompany
 {
     public partial class LoginWindow : Window
     {
+        private DataBase database;
+
         public LoginWindow()
         {
             InitializeComponent();
+            database = new DataBase();
         }
 
         private void LoginButton_Click(object sender, RoutedEventArgs e)
         {
-            string username = usernameTextBox.Text;
-            string password = passwordBox.Password;
+            string username = usernameTextBox.Text.Trim();
 
-            using (var db = new DataBase())
+            if (!string.IsNullOrEmpty(username))
             {
-                db.openConnection();
-                string query = $"SELECT * FROM Люди WHERE Фамилия='{username}' AND Пароль='{password}'";
-                var reader = db.ExecuteQuery(query);
+                int? userId = GetUserIdByUsername(username);
 
-                if (reader.Read())
+                if (userId.HasValue)
                 {
-                    string role = reader["Роль"].ToString();
-                    MainWindow mainWindow = new MainWindow();
+                    MainWindow mainWindow = new MainWindow(userId.Value);
                     mainWindow.Show();
                     this.Close();
                 }
                 else
                 {
-                    MessageBox.Show("Invalid username or password");
+                    MessageBox.Show("Пользователь с такой фамилией не найден.", "Ошибка входа", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
-
-                db.closeConnection();
             }
+            else
+            {
+                MessageBox.Show("Пожалуйста, введите фамилию.", "Ошибка входа", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+        }
+
+        private int? GetUserIdByUsername(string username)
+        {
+            int? userId = null;
+            string query = "SELECT id_Люди FROM Люди WHERE Фамилия = @username";
+
+            database.openConnection();
+            using (SqlCommand cmd = new SqlCommand(query, database.sqlConnection))
+            {
+                cmd.Parameters.AddWithValue("@username", username);
+                var result = cmd.ExecuteScalar();
+                if (result != null)
+                {
+                    userId = Convert.ToInt32(result);
+                }
+            }
+            database.closeConnection();
+
+            return userId;
         }
 
         private void RegisterButton_Click(object sender, RoutedEventArgs e)

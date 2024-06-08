@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.Windows;
+using System.Data.SqlClient;
 
 namespace StroyCompany
 {
@@ -32,15 +33,41 @@ namespace StroyCompany
             string address = addressTextBox.Text;
             string type = typeTextBox.Text;
             string groupName = groupNameTextBox.Text;
-            string cost = costTextBox.Text;
+            decimal cost;
 
-            string updateQuery = $"UPDATE Объект SET Название = '{name}', Адрес = '{address}', Тип = '{type}', Стоимость = {cost}, FK_Рабочая_группа = (SELECT id_Рабочая_группа FROM Рабочая_группа WHERE Название = '{groupName}'";
+            if (!decimal.TryParse(costTextBox.Text, out cost))
+            {
+                MessageBox.Show("Invalid cost value.");
+                return;
+            }
+
+            string updateQuery = @"
+            UPDATE Объект 
+            SET Название = @name, Адрес = @address, Тип = @type, Стоимость = @cost, 
+                FK_Рабочая_группа = (SELECT id_Рабочая_группа FROM Рабочая_группа WHERE Название = @groupName) 
+            WHERE Название = @originalName";
 
             database.openConnection();
-            database.ExecuteQuery(updateQuery);
-            database.closeConnection();
+            using (SqlCommand cmd = new SqlCommand(updateQuery, database.sqlConnection))
+            {
+                cmd.Parameters.AddWithValue("@name", name);
+                cmd.Parameters.AddWithValue("@address", address);
+                cmd.Parameters.AddWithValue("@type", type);
+                cmd.Parameters.AddWithValue("@cost", cost);
+                cmd.Parameters.AddWithValue("@groupName", groupName);
+                cmd.Parameters.AddWithValue("@originalName", selectedRow["Название"].ToString());
 
-            MessageBox.Show("Object updated successfully!");
+                try
+                {
+                    cmd.ExecuteNonQuery();
+                    MessageBox.Show("Update successful.");
+                }
+                catch (SqlException ex)
+                {
+                    MessageBox.Show("Error updating object: " + ex.Message);
+                }
+            }
+            database.closeConnection();
             this.Close();
         }
     }
